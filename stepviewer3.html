@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>STEP Viewer Demo (OpenCascade)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-alt: #0b1220;
+      --card-bg: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --text: #e5e7eb;
+      --text-soft: #9ca3af;
+      --border: #1f2937;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --shadow-soft: 0 20px 40px rgba(15, 23, 42, 0.9);
+      --transition: 180ms ease;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1e293b 0, #020617 55%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 1200px;
+      margin: 16px;
+      border-radius: 24px;
+      background: linear-gradient(145deg, #020617 0, #020617 40%, #020617 100%);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.9);
+      overflow: hidden;
+    }
+
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: radial-gradient(circle at top left, #0f172a 0, #020617 55%);
+    }
+
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #e0f2fe;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1px solid rgba(56, 189, 248, 0.6);
+    }
+
+    h1 {
+      font-size: 18px;
+      margin: 0;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h1 span.icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 30% 0, #38bdf8 0, #0f172a 60%);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.9);
+      font-size: 14px;
+    }
+
+    header p {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: var(--text-soft);
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+      min-height: 480px;
+    }
+
+    .wizard-pane {
+      width: 360px;
+      max-width: 100%;
+      border-right: 1px solid rgba(148, 163, 184, 0.18);
+      padding: 18px 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: radial-gradient(circle at top left, var(--bg) 0, var(--bg-alt) 60%);
+    }
+
+    .viewer-pane {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(circle at top, #020617 0, #000 70%);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .step-indicator {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .step-dot {
+      flex: 1;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step-dot.active::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, #22c55e, #38bdf8);
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+    }
+
+    .step-dot.done { background: rgba(34, 197, 94, 0.7); }
+
+    .step-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-soft);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .card {
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: radial-gradient(circle at top left, #020617 0, #020617 70%);
+      padding: 14px 14px 12px;
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.7);
+    }
+
+    .card h2 {
+      font-size: 15px;
+      margin: 0 0 4px;
+      font-weight: 600;
+    }
+
+    .card p {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: var(--text-soft);
+    }
+
+    .field-label {
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: var(--text-soft);
+    }
+
+    .file-input {
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 999px;
+      border: 1px dashed rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-soft);
+      font-size: 12px;
+    }
+
+    .file-input:hover { border-style: solid; }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 7px 12px;
+      font-size: 12px;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 180ms ease, box-shadow 180ms ease,
+        background 180ms ease, border-color 180ms ease;
+    }
+
+    button span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.8);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #22c55e, #38bdf8);
+      border-color: transparent;
+      color: #0b1120;
+      font-weight: 500;
+      box-shadow: 0 10px 18px rgba(56, 189, 248, 0.35);
+    }
+
+    button.primary span.dot { background: #0b1120; }
+
+    button.ghost { background: rgba(15, 23, 42, 0.9); }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 14px rgba(15, 23, 42, 0.9);
+    }
+
+    button.primary:hover {
+      box-shadow: 0 12px 22px rgba(56, 189, 248, 0.55);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      padding: 7px 12px;
+      font-size: 13px;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text);
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.5);
+      background: #020617;
+    }
+
+    .checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 4px 0 6px;
+      font-size: 13px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 180ms ease;
+    }
+
+    .check-item:hover { background: rgba(15, 23, 42, 0.8); }
+
+    .check-item input { accent-color: var(--accent); }
+
+    .mini-note {
+      font-size: 11px;
+      color: var(--text-soft);
+      margin-top: 4px;
+    }
+
+    .badge-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      color: var(--text-soft);
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    .badge.good {
+      border-color: rgba(34, 197, 94, 0.8);
+      color: #bbf7d0;
+      background: rgba(22, 101, 52, 0.25);
+    }
+
+    .badge.warn {
+      border-color: rgba(248, 250, 252, 0.4);
+      color: #e5e7eb;
+      background: rgba(30, 64, 175, 0.3);
+    }
+
+    .badge.error {
+      border-color: rgba(248, 113, 113, 0.9);
+      color: #fecaca;
+      background: rgba(127, 29, 29, 0.4);
+    }
+
+    .hidden { display: none !important; }
+
+    .viewer-header {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .viewer-header strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .viewer-canvas-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #viewer-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .viewer-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-soft);
+      text-align: center;
+      padding: 0 16px;
+      pointer-events: none;
+    }
+
+    .dot-pulse {
+      display: inline-flex;
+      gap: 5px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dot-pulse span {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      animation: pulse 1s infinite ease-in-out;
+    }
+
+    .dot-pulse span:nth-child(2) { animation-delay: 0.12s; }
+    .dot-pulse span:nth-child(3) { animation-delay: 0.24s; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.4; }
+      50% { transform: scale(1.4); opacity: 1; }
+    }
+
+    @media (max-width: 880px) {
+      .app-shell { flex-direction: column; }
+      main { flex-direction: column; }
+      .wizard-pane {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+      }
+    }
+  </style>
+
+  <!-- OCCT (WebAssembly loader) -->
+  <script src="occt-import-js.js"></script>
+
+  <!-- Three.js klassiek (globale THREE) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.110.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.110.0/examples/js/controls/OrbitControls.js"></script>
+
+</head>
+<body>
+<div class="app-shell">
+  <header>
+    <div class="pill">Demo · OpenCascade STEP Viewer</div>
+    <div style="flex:1">
+      <h1><span class="icon">3D</span> Artikel wizard &amp; STEP viewer</h1>
+      <p>Upload een STEP-bestand, vul de meta-data in en bekijk het model direct in de browser.</p>
+    </div>
+  </header>
+
+  <main>
+    <!-- Wizard -->
+    <aside class="wizard-pane">
+      <div class="step-indicator">
+        <div class="step-dot" data-step-dot="1"></div>
+        <div class="step-dot" data-step-dot="2"></div>
+        <div class="step-dot" data-step-dot="3"></div>
+        <div class="step-dot" data-step-dot="4"></div>
+        <div class="step-dot" data-step-dot="5"></div>
+      </div>
+      <div class="step-label">
+        <span>Upload</span>
+        <span>Metadata</span>
+      </div>
+
+      <!-- Stap 1: STEP upload -->
+      <section class="card" id="step-1">
+        <h2>1. STEP-bestand uploaden</h2>
+        <p>Kies een <strong>.step</strong> of <strong>.stp</strong>-bestand om te bekijken.</p>
+
+        <label class="field-label" for="stepFileInput">STEP / STP bestand</label>
+        <input id="stepFileInput" class="file-input" type="file" accept=".step,.stp" />
+
+        <div class="mini-note">
+          Bestanden blijven in de browser; er wordt niets naar een server geüpload.
+        </div>
+      </section>
+
+      <!-- Stap 2: Wil je dit bestand opslaan? -->
+      <section class="card hidden" id="step-2">
+        <h2>2. Bestand opslaan?</h2>
+        <p>Geef aan of dit bestand aan het artikel opgeslagen moet worden.</p>
+
+        <div class="btn-row">
+          <button type="button" class="primary" id="btnSaveYes">
+            <span class="dot"></span> Ja, opslaan
+          </button>
+          <button type="button" class="ghost" id="btnSaveNo">
+            <span class="dot"></span> Nee, niet opslaan
+          </button>
+        </div>
+      </section>
+
+      <!-- Stap 3: SAP-nummer -->
+      <section class="card hidden" id="step-3">
+        <h2>3. SAP-nummer</h2>
+        <p>Is er een SAP-artikelnummer bekend voor dit onderdeel?</p>
+
+        <label class="field-label" for="sapInput">SAP-nummer (optioneel)</label>
+        <input type="text" id="sapInput" placeholder="Bijv. 123456789" />
+
+        <div class="btn-row">
+          <button type="button" class="primary" id="btnSapSave">
+            <span class="dot"></span> SAP opslaan
+          </button>
+          <button type="button" class="ghost" id="btnSapSkip">
+            <span class="dot"></span> Nee, geen SAP-nummer
+          </button>
+        </div>
+      </section>
+
+      <!-- Stap 4: Delen met derden -->
+      <section class="card hidden" id="step-4">
+        <h2>4. Delen met derden</h2>
+        <p>Welke delingsrestrictie hoort bij dit bestand? Je kunt er één of meerdere kiezen.</p>
+
+        <div class="checklist" id="shareChecklist">
+          <label class="check-item">
+            <input type="checkbox" value="vrij" />
+            <span>Ja, vrij te delen</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" value="defensie" />
+            <span>Alleen defensie gebruik</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" value="abdo" />
+            <span>Delen met ABDO leveranciers</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" value="itar" />
+            <span>ITAR restricted</span>
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="primary" id="btnShareNext">
+            <span class="dot"></span> Volgende
+          </button>
+        </div>
+      </section>
+
+      <!-- Stap 5: Extra bestanden -->
+      <section class="card hidden" id="step-5">
+        <h2>5. Extra bestanden</h2>
+        <p>Wil je nog meer bestanden uploaden die bij dit artikelnummer horen?</p>
+
+        <label class="field-label" for="extraFileInput">Extra bestand (optioneel)</label>
+        <input id="extraFileInput" class="file-input" type="file" />
+
+        <div class="field-label" style="margin-top:8px;">Type bestand</div>
+        <div class="checklist" id="extraTypeChecklist">
+          <label class="check-item">
+            <input type="radio" name="extraType" value="datasheet" />
+            <span>Datasheet</span>
+          </label>
+          <label class="check-item">
+            <input type="radio" name="extraType" value="tekening" />
+            <span>Tekening</span>
+          </label>
+          <label class="check-item">
+            <input type="radio" name="extraType" value="handleiding" />
+            <span>Handleiding</span>
+          </label>
+          <label class="check-item">
+            <input type="radio" name="extraType" value="overig" />
+            <span>Overig</span>
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="ghost" id="btnAddExtra">
+            <span class="dot"></span> Bestand toevoegen
+          </button>
+          <button type="button" class="primary" id="btnStartViewer">
+            <span class="dot"></span> Klaar &amp; viewer starten
+          </button>
+        </div>
+
+        <div class="mini-note">
+          Dit is een demo: extra uploads worden niet opgeslagen, maar er worden ook geen fouten gegeven.
+        </div>
+
+        <div class="badge-list" id="extraList"></div>
+      </section>
+
+      <div class="badge-list">
+        <div class="badge warn">Alle logica draait volledig client-side</div>
+        <div class="badge good">Geschikt voor GitHub Pages demo</div>
+      </div>
+    </aside>
+
+    <!-- Viewer -->
+    <section class="viewer-pane">
+      <div class="viewer-header">
+        <div>
+          <strong id="viewerTitle">Geen model geladen</strong><br />
+          <span id="viewerMeta">Voltooi eerst de wizard om de STEP-viewer te starten.</span>
+        </div>
+        <div class="dot-pulse" id="viewerStatusDots" style="opacity:0.1;">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="viewer-canvas-wrap">
+        <canvas id="viewer-canvas"></canvas>
+        <div class="viewer-placeholder" id="viewerPlaceholder">
+          <div class="badge warn">Viewer inactief</div>
+          <div>
+            Voltooi eerst alle stappen in de wizard links.<br />
+            Daarna wordt het STEP-model hier weergegeven.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  // ---- State ----
+  const state = {
+    currentStep: 1,
+    stepFile: null,
+    stepFileName: null,
+    saveFile: null,
+    sapNumber: null,
+    shareFlags: [],
+    extras: [],
+    occtLoaded: false,
+    occtFailed: false,
+    occtPromise: null,
+    three: {
+      scene: null,
+      camera: null,
+      renderer: null,
+      controls: null,
+      canvas: null
+    }
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const stepDots = document.querySelectorAll("[data-step-dot]");
+
+  function setStep(step) {
+    state.currentStep = step;
+    ["step-1","step-2","step-3","step-4","step-5"].forEach(id => {
+      const el = $(id);
+      if (el) el.classList.add("hidden");
+    });
+    const visible = $("step-" + step);
+    if (visible) visible.classList.remove("hidden");
+
+    stepDots.forEach(dot => {
+      const n = Number(dot.dataset.stepDot);
+      dot.classList.remove("active","done");
+      if (n < step) dot.classList.add("done");
+      if (n === step) dot.classList.add("active");
+    });
+  }
+
+  function addExtraBadge(fileName, type) {
+    const container = $("extraList");
+    const badge = document.createElement("div");
+    badge.className = "badge";
+    badge.textContent = type + " · " + fileName;
+    container.appendChild(badge);
+  }
+
+  async function ensureOcct() {
+    if (state.occtFailed) return null;
+    if (state.occtPromise) return state.occtPromise;
+
+    if (typeof window.occtimportjs !== "function") {
+      state.occtFailed = true;
+      console.warn("occt-import-js.js niet gevonden of niet geladen.");
+      return null;
+    }
+
+    state.occtPromise = window.occtimportjs()
+      .then(occt => {
+        state.occtLoaded = true;
+        return occt;
+      })
+      .catch(err => {
+        console.warn("Kon occt-import-js niet initialiseren:", err);
+        state.occtFailed = true;
+        return null;
+      });
+
+    return state.occtPromise;
+  }
+
+  function initViewer() {
+    const canvas = $("viewer-canvas");
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x020617);
+
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 5000);
+    camera.position.set(200,200,200);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    renderer.setSize(canvas.clientWidth || 100, canvas.clientHeight || 100, false);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x111827, 0.6);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(200,200,100);
+    scene.add(dir);
+
+    const grid = new THREE.GridHelper(400, 20, 0x1f2933, 0x0f172a);
+    scene.add(grid);
+
+    state.three = { scene, camera, renderer, controls, canvas };
+
+    function onResize() {
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width || canvas.clientWidth || 100;
+      const height = rect.height || canvas.clientHeight || 100;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+    }
+    window.addEventListener("resize", onResize);
+    onResize();
+
+    (function animate(){
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    })();
+  }
+
+  function clearSceneMeshes() {
+    const scene = state.three.scene;
+    if (!scene) return;
+    const toRemove = [];
+    scene.traverse(obj => { if (obj.isMesh) toRemove.push(obj); });
+    toRemove.forEach(m => scene.remove(m));
+  }
+
+  function colorArrayToHex(colorArray) {
+    if (!colorArray || colorArray.length < 3) return 0x4b5563;
+    const [r,g,b] = colorArray;
+    const rr = Math.round(r*255);
+    const gg = Math.round(g*255);
+    const bb = Math.round(b*255);
+    return (rr << 16) | (gg << 8) | bb;
+  }
+
+  function focusCameraOnScene() {
+    const { scene, camera, controls } = state.three;
+    const box = new THREE.Box3().setFromObject(scene);
+    if (!isFinite(box.min.x) || !isFinite(box.max.x)) return;
+
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+
+    scene.position.sub(center);
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * Math.PI / 180;
+    let dist = maxDim / (2 * Math.tan(fov/2));
+    dist *= 2;
+
+    camera.position.set(dist, dist*0.8, dist);
+    camera.lookAt(0,0,0);
+    controls.target.set(0,0,0);
+    controls.update();
+  }
+
+  async function loadStepIntoViewer(file) {
+    $("viewerTitle").textContent = state.stepFileName || "Model laden...";
+    $("viewerMeta").textContent = "STEP-bestand wordt verwerkt met OpenCascade (occt-import-js)...";
+    $("viewerStatusDots").style.opacity = "1";
+    $("viewerPlaceholder").classList.add("hidden");
+
+    if (!state.three.scene) initViewer();
+
+    const occt = await ensureOcct();
+    if (!occt) {
+      $("viewerMeta").textContent = "occt-import-js is niet beschikbaar (check bestanden).";
+      $("viewerPlaceholder").classList.remove("hidden");
+      $("viewerPlaceholder").innerHTML =
+        '<div class="badge error">OCCT niet geladen</div>' +
+        '<div>Controleer of occt-import-js.js en de .wasm in dezelfde map staan.</div>';
+      $("viewerStatusDots").style.opacity = "0.15";
+      return;
+    }
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const fileBuffer = new Uint8Array(buffer);
+      const params = {
+        linearUnit: "millimeter",
+        linearDeflectionType: "absolute_value",
+        linearDeflection: 0.2,
+        angularDeflection: 0.5
+      };
+      const result = occt.ReadStepFile(fileBuffer, params);
+
+      if (!result || !result.success) {
+        console.warn("STEP import mislukt", result);
+        $("viewerMeta").textContent = "STEP kon niet worden omgezet naar een mesh.";
+        $("viewerPlaceholder").classList.remove("hidden");
+        $("viewerPlaceholder").innerHTML =
+          '<div class="badge error">Kon model niet renderen</div>' +
+          '<div>Gebruik dit in de demo als scenario met een corrupt CAD-bestand.</div>';
+        $("viewerStatusDots").style.opacity = "0.15";
+        return;
+      }
+
+      clearSceneMeshes();
+      const scene = state.three.scene;
+
+      (result.meshes || []).forEach(m => {
+        const geom = new THREE.BufferGeometry();
+        const posArr = new Float32Array(m.attributes.position.array);
+        geom.setAttribute("position", new THREE.BufferAttribute(posArr, 3));
+
+        if (m.attributes.normal && m.attributes.normal.array) {
+          const normArr = new Float32Array(m.attributes.normal.array);
+          geom.setAttribute("normal", new THREE.BufferAttribute(normArr, 3));
+        } else {
+          geom.computeVertexNormals();
+        }
+
+        const indexArr = new Uint32Array(m.index.array);
+        geom.setIndex(new THREE.BufferAttribute(indexArr, 1));
+
+        const material = new THREE.MeshStandardMaterial({
+          color: colorArrayToHex(m.color),
+          metalness: 0.15,
+          roughness: 0.8
+        });
+
+        const mesh = new THREE.Mesh(geom, material);
+        scene.add(mesh);
+      });
+
+      focusCameraOnScene();
+
+      $("viewerTitle").textContent = state.stepFileName || "STEP-model";
+      $("viewerMeta").textContent =
+        "Model geladen. Muis: slepen = orbit, scroll = zoom, rechtsknop = pan.";
+      $("viewerStatusDots").style.opacity = "0.15";
+      $("viewerPlaceholder").classList.add("hidden");
+    } catch (err) {
+      console.error("Fout bij lezen STEP-bestand", err);
+      $("viewerMeta").textContent = "Er ging iets mis bij het lezen van het STEP-bestand.";
+      $("viewerPlaceholder").classList.remove("hidden");
+      $("viewerPlaceholder").innerHTML =
+        '<div class="badge error">Viewer fout</div>' +
+        '<div>Bekijk de browserconsole voor details (demo blijft gewoon draaien).</div>';
+      $("viewerStatusDots").style.opacity = "0.15";
+    }
+  }
+
+  // ---- Wizard events ----
+  $("stepFileInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    state.stepFile = file;
+    state.stepFileName = file.name;
+
+    setStep(2); // eerst UI
+    setTimeout(() => {              // dan viewer
+      loadStepIntoViewer(file);
+    }, 50);
+  });
+
+  $("btnSaveYes").addEventListener("click", () => {
+    state.saveFile = true;
+    setStep(3);
+  });
+
+  $("btnSaveNo").addEventListener("click", () => {
+    state.saveFile = false;
+    setStep(3);
+  });
+
+  $("btnSapSave").addEventListener("click", () => {
+    const sap = $("sapInput").value.trim();
+    state.sapNumber = sap || null;
+    setStep(4);
+  });
+
+  $("btnSapSkip").addEventListener("click", () => {
+    state.sapNumber = null;
+    setStep(4);
+  });
+
+  $("btnShareNext").addEventListener("click", () => {
+    const checks = Array.from(
+      $("shareChecklist").querySelectorAll("input[type=checkbox]")
+    );
+    state.shareFlags = checks.filter(c => c.checked).map(c => c.value);
+    setStep(5);
+  });
+
+  $("btnAddExtra").addEventListener("click", () => {
+    const file = $("extraFileInput").files[0];
+    if (!file) return;
+    const typeEl = document.querySelector("input[name=extraType]:checked");
+    const type = typeEl ? typeEl.value : "onbekend";
+    state.extras.push({ name: file.name, type });
+    addExtraBadge(file.name, type);
+    $("extraFileInput").value = "";
+    if (typeEl) typeEl.checked = false;
+  });
+
+  $("btnStartViewer").addEventListener("click", () => {
+    if (!state.stepFile) {
+      alert("Kies eerst een STEP-bestand in stap 1.");
+      return;
+    }
+    setStep(5); // viewer draait al sinds stap 1
+  });
+
+  setStep(1);
+</script>
+</body>
+</html>
