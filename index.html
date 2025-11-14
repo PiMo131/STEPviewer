@@ -605,6 +605,7 @@
     occtLoaded: false,
     occtFailed: false,
     occtPromise: null,
+    gridHelper: null,
     three: {
       scene: null,
       camera: null,
@@ -655,6 +656,7 @@
     state.occtPromise = window.occtimportjs()
       .then(occt => {
         state.occtLoaded = true;
+        console.log("✅ OCCT succesvol geladen");
         return occt;
       })
       .catch(err => {
@@ -671,12 +673,11 @@
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x020617);
 
-    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 5000);
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 50000);
     camera.position.set(200,200,200);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio || 1);
-    renderer.setSize(canvas.clientWidth || 100, canvas.clientHeight || 100, false);
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -688,8 +689,8 @@
     dir.position.set(200,200,100);
     scene.add(dir);
 
-    const grid = new THREE.GridHelper(400, 20, 0x1f2933, 0x0f172a);
-    scene.add(grid);
+    // Grid wordt later toegevoegd met correcte schaal
+    state.gridHelper = null;
 
     state.three = { scene, camera, renderer, controls, canvas };
 
@@ -709,14 +710,23 @@
       controls.update();
       renderer.render(scene, camera);
     })();
+
+    console.log("✅ Three.js viewer geïnitialiseerd");
   }
 
   function clearSceneMeshes() {
     const scene = state.three.scene;
     if (!scene) return;
     const toRemove = [];
-    scene.traverse(obj => { if (obj.isMesh) toRemove.push(obj); });
+    scene.traverse(obj => { 
+      if (obj.isMesh || obj.type === 'GridHelper') toRemove.push(obj); 
+    });
     toRemove.forEach(m => scene.remove(m));
+    if (state.gridHelper) {
+      scene.remove(state.gridHelper);
+      state.gridHelper = null;
+    }
+    console.log("🧹 Scene meshes verwijderd");
   }
 
   function colorArrayToHex(colorArray) {
@@ -730,34 +740,77 @@
 
   function focusCameraOnScene() {
     const { scene, camera, controls } = state.three;
-    const box = new THREE.Box3().setFromObject(scene);
-    if (!isFinite(box.min.x) || !isFinite(box.max.x)) return;
+    
+    // Bereken bounding box van alleen de meshes
+    const box = new THREE.Box3();
+    let hasMeshes = false;
+    scene.traverse(obj => {
+      if (obj.isMesh) {
+        box.expandByObject(obj);
+        hasMeshes = true;
+      }
+    });
+    
+    if (!hasMeshes || !isFinite(box.min.x) || !isFinite(box.max.x)) {
+      console.warn("⚠️ Geen geldige meshes gevonden voor camera focus");
+      return;
+    }
 
     const size = new THREE.Vector3();
     const center = new THREE.Vector3();
     box.getSize(size);
     box.getCenter(center);
 
-    scene.position.sub(center);
+    console.log("📏 Model grootte:", size);
+    console.log("📍 Model centrum:", center);
 
+    // Voeg grid toe met juiste schaal
     const maxDim = Math.max(size.x, size.y, size.z);
+    const gridSize = Math.max(maxDim * 2, 100);
+    const gridDivisions = 20;
+    
+    if (state.gridHelper) {
+      scene.remove(state.gridHelper);
+    }
+    state.gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x1f2933, 0x0f172a);
+    state.gridHelper.position.y = box.min.y - 1; // Grid net onder het model
+    scene.add(state.gridHelper);
+
+    // Camera afstand berekenen
     const fov = camera.fov * Math.PI / 180;
     let dist = maxDim / (2 * Math.tan(fov/2));
-    dist *= 2;
+    dist *= 2.5; // Iets verder weg voor beter overzicht
 
-    camera.position.set(dist, dist*0.8, dist);
-    camera.lookAt(0,0,0);
-    controls.target.set(0,0,0);
+    // Camera positioneren
+    const offset = new THREE.Vector3(dist, dist*0.7, dist);
+    camera.position.copy(center).add(offset);
+    camera.lookAt(center);
+    
+    // Controls target instellen
+    controls.target.copy(center);
     controls.update();
+
+    // Near/far planes aanpassen
+    camera.near = maxDim * 0.01;
+    camera.far = maxDim * 100;
+    camera.updateProjectionMatrix();
+
+    console.log("📹 Camera positie:", camera.position);
+    console.log("🎯 Camera kijkt naar:", controls.target);
   }
 
   async function loadStepIntoViewer(file) {
+    console.log("🚀 Start laden STEP-bestand:", file.name);
+    
     $("viewerTitle").textContent = state.stepFileName || "Model laden...";
     $("viewerMeta").textContent = "STEP-bestand wordt verwerkt met OpenCascade (occt-import-js)...";
     $("viewerStatusDots").style.opacity = "1";
     $("viewerPlaceholder").classList.add("hidden");
 
-    if (!state.three.scene) initViewer();
+    if (!state.three.scene) {
+      console.log("🎬 Initialiseer Three.js viewer...");
+      initViewer();
+    }
 
     const occt = await ensureOcct();
     if (!occt) {
@@ -772,8 +825,11 @@
     }
 
     try {
+      console.log("📦 Lees bestand als ArrayBuffer...");
       const buffer = await file.arrayBuffer();
       const fileBuffer = new Uint8Array(buffer);
+      
+      console.log("⚙️ Start OCCT conversie...");
       const params = {
         linearUnit: "millimeter",
         linearDeflectionType: "absolute_value",
@@ -783,7 +839,7 @@
       const result = occt.ReadStepFile(fileBuffer, params);
 
       if (!result || !result.success) {
-        console.warn("STEP import mislukt", result);
+        console.warn("❌ STEP import mislukt", result);
         $("viewerMeta").textContent = "STEP kon niet worden omgezet naar een mesh.";
         $("viewerPlaceholder").classList.remove("hidden");
         $("viewerPlaceholder").innerHTML =
@@ -793,10 +849,14 @@
         return;
       }
 
+      console.log("✅ STEP succesvol geconverteerd, aantal meshes:", result.meshes?.length || 0);
+
       clearSceneMeshes();
       const scene = state.three.scene;
 
-      (result.meshes || []).forEach(m => {
+      (result.meshes || []).forEach((m, idx) => {
+        console.log(`  📐 Mesh ${idx + 1}: ${m.attributes.position.array.length / 3} vertices`);
+        
         const geom = new THREE.BufferGeometry();
         const posArr = new Float32Array(m.attributes.position.array);
         geom.setAttribute("position", new THREE.BufferAttribute(posArr, 3));
@@ -821,6 +881,7 @@
         scene.add(mesh);
       });
 
+      console.log("🎥 Focus camera op model...");
       focusCameraOnScene();
 
       $("viewerTitle").textContent = state.stepFileName || "STEP-model";
@@ -828,8 +889,10 @@
         "Model geladen. Muis: slepen = orbit, scroll = zoom, rechtsknop = pan.";
       $("viewerStatusDots").style.opacity = "0.15";
       $("viewerPlaceholder").classList.add("hidden");
+      
+      console.log("✅ Model volledig geladen en zichtbaar!");
     } catch (err) {
-      console.error("Fout bij lezen STEP-bestand", err);
+      console.error("❌ Fout bij lezen STEP-bestand:", err);
       $("viewerMeta").textContent = "Er ging iets mis bij het lezen van het STEP-bestand.";
       $("viewerPlaceholder").classList.remove("hidden");
       $("viewerPlaceholder").innerHTML =
@@ -846,8 +909,8 @@
     state.stepFile = file;
     state.stepFileName = file.name;
 
-    setStep(2); // eerst UI
-    setTimeout(() => {              // dan viewer
+    setStep(2);
+    setTimeout(() => {
       loadStepIntoViewer(file);
     }, 50);
   });
@@ -857,11 +920,11 @@
     try {
       const response = await fetch("DEMOSTEPFILE.STEP");
       if (!response.ok) {
-        alert("Kon DEMOSTEPFILE.STP niet laden. Staat het bestand in dezelfde map als deze HTML?");
+        alert("Kon DEMOSTEPFILE.STEP niet laden. Staat het bestand in dezelfde map als deze HTML?");
         return;
       }
       const blob = await response.blob();
-      const demoFile = new File([blob], "DEMOSTEPFILE.STP", { type: "application/octet-stream" });
+      const demoFile = new File([blob], "DEMOSTEPFILE.STEP", { type: "application/octet-stream" });
 
       state.stepFile = demoFile;
       state.stepFileName = demoFile.name;
@@ -921,7 +984,7 @@
       alert("Kies eerst een STEP-bestand in stap 1 of gebruik het demo-bestand.");
       return;
     }
-    setStep(5); // viewer draait al sinds stap 1/demo
+    setStep(5);
   });
 
   setStep(1);
