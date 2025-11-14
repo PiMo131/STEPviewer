@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <title>STEP Viewer Demo (OpenCascade)</title>
+  <title>STEP Viewer Demo - PROFILE EQUIPMENT BV</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
@@ -120,40 +120,6 @@
       flex-direction: column;
     }
 
-    .step-indicator {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 4px;
-    }
-
-    .step-dot {
-      flex: 1;
-      height: 3px;
-      border-radius: 999px;
-      background: rgba(148, 163, 184, 0.3);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .step-dot.active::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, #22c55e, #38bdf8);
-      box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
-    }
-
-    .step-dot.done { background: rgba(34, 197, 94, 0.7); }
-
-    .step-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-soft);
-      display: flex;
-      justify-content: space-between;
-    }
-
     .card {
       border-radius: 18px;
       border: 1px solid rgba(148, 163, 184, 0.5);
@@ -241,44 +207,6 @@
     button.primary:hover {
       box-shadow: 0 12px 22px rgba(56, 189, 248, 0.55);
     }
-
-    input[type="text"] {
-      width: 100%;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      padding: 7px 12px;
-      font-size: 13px;
-      background: rgba(15, 23, 42, 0.9);
-      color: var(--text);
-      outline: none;
-    }
-
-    input[type="text"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.5);
-      background: #020617;
-    }
-
-    .checklist {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin: 4px 0 6px;
-      font-size: 13px;
-    }
-
-    .check-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 6px;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: background 180ms ease;
-    }
-
-    .check-item:hover { background: rgba(15, 23, 42, 0.8); }
-    .check-item input { accent-color: var(--accent); }
 
     .mini-note {
       font-size: 11px;
@@ -411,40 +339,29 @@
 <body>
 <div class="app-shell">
   <header>
-    <div class="pill">Demo · OpenCascade STEP Viewer</div>
+    
     <div style="flex:1">
-      <h1><span class="icon">3D</span> Artikel wizard &amp; STEP viewer</h1>
-      <p>Upload een STEP-bestand, vul de meta-data in en bekijk het model direct in de browser.</p>
+      <h1><span class="icon">3D</span> STEP viewer</h1>
+      <p>Upload een STEP-bestand en bekijk het model direct in de browser.</p>
     </div>
   </header>
 
   <main>
-    <!-- Wizard -->
+    <!-- Linkerzijde: eenvoudige controls -->
     <aside class="wizard-pane">
-      <div class="step-indicator">
-        <div class="step-dot" data-step-dot="1"></div>
-        <div class="step-dot" data-step-dot="2"></div>
-        <div class="step-dot" data-step-dot="3"></div>
-        <div class="step-dot" data-step-dot="4"></div>
-        <div class="step-dot" data-step-dot="5"></div>
-      </div>
-      <div class="step-label">
-        <span>Upload</span>
-        <span>Metadata</span>
-      </div>
-
-      <!-- Stap 1: STEP upload -->
-      <section class="card" id="step-1">
-        <h2>1. STEP-bestand uploaden</h2>
+      <section class="card">
+        <h2>STEP-bestand uploaden</h2>
         <p>Kies een <strong>.step</strong> of <strong>.stp</strong>-bestand om te bekijken.</p>
 
         <label class="field-label" for="stepFileInput">STEP / STP bestand</label>
         <input id="stepFileInput" class="file-input" type="file" accept=".step,.stp" />
 
-        <!-- Demo-knop -->
         <div class="btn-row">
           <button type="button" id="btnLoadDemo" class="ghost">
-            <span class="dot"></span> Gebruik demo-bestand
+            <span class="dot"></span> Voorbeeldbestand
+          </button>
+          <button type="button" id="btnRefresh" class="primary">
+            <span class="dot"></span> Nieuwe sessie
           </button>
         </div>
 
@@ -453,117 +370,9 @@
         </div>
       </section>
 
-      <!-- Stap 2: Wil je dit bestand opslaan? -->
-      <section class="card hidden" id="step-2">
-        <h2>2. Bestand opslaan?</h2>
-        <p>Geef aan of dit bestand aan het artikel opgeslagen moet worden.</p>
-
-        <div class="btn-row">
-          <button type="button" class="primary" id="btnSaveYes">
-            <span class="dot"></span> Ja, opslaan
-          </button>
-          <button type="button" class="ghost" id="btnSaveNo">
-            <span class="dot"></span> Nee, niet opslaan
-          </button>
-        </div>
-      </section>
-
-      <!-- Stap 3: SAP-nummer -->
-      <section class="card hidden" id="step-3">
-        <h2>3. SAP-nummer</h2>
-        <p>Is er een SAP-artikelnummer bekend voor dit onderdeel?</p>
-
-        <label class="field-label" for="sapInput">SAP-nummer (optioneel)</label>
-        <input type="text" id="sapInput" placeholder="Bijv. 123456789" />
-
-        <div class="btn-row">
-          <button type="button" class="primary" id="btnSapSave">
-            <span class="dot"></span> SAP opslaan
-          </button>
-          <button type="button" class="ghost" id="btnSapSkip">
-            <span class="dot"></span> Nee, geen SAP-nummer
-          </button>
-        </div>
-      </section>
-
-      <!-- Stap 4: Delen met derden -->
-      <section class="card hidden" id="step-4">
-        <h2>4. Delen met derden</h2>
-        <p>Welke delingsrestrictie hoort bij dit bestand? Je kunt er één of meerdere kiezen.</p>
-
-        <div class="checklist" id="shareChecklist">
-          <label class="check-item">
-            <input type="checkbox" value="vrij" />
-            <span>Ja, vrij te delen</span>
-          </label>
-          <label class="check-item">
-            <input type="checkbox" value="defensie" />
-            <span>Alleen defensie gebruik</span>
-          </label>
-          <label class="check-item">
-            <input type="checkbox" value="abdo" />
-            <span>Delen met ABDO leveranciers</span>
-          </label>
-          <label class="check-item">
-            <input type="checkbox" value="itar" />
-            <span>ITAR restricted</span>
-          </label>
-        </div>
-
-        <div class="btn-row">
-          <button type="button" class="primary" id="btnShareNext">
-            <span class="dot"></span> Volgende
-          </button>
-        </div>
-      </section>
-
-      <!-- Stap 5: Extra bestanden -->
-      <section class="card hidden" id="step-5">
-        <h2>5. Extra bestanden</h2>
-        <p>Wil je nog meer bestanden uploaden die bij dit artikelnummer horen?</p>
-
-        <label class="field-label" for="extraFileInput">Extra bestand (optioneel)</label>
-        <input id="extraFileInput" class="file-input" type="file" />
-
-        <div class="field-label" style="margin-top:8px;">Type bestand</div>
-        <div class="checklist" id="extraTypeChecklist">
-          <label class="check-item">
-            <input type="radio" name="extraType" value="datasheet" />
-            <span>Datasheet</span>
-          </label>
-          <label class="check-item">
-            <input type="radio" name="extraType" value="tekening" />
-            <span>Tekening</span>
-          </label>
-          <label class="check-item">
-            <input type="radio" name="extraType" value="handleiding" />
-            <span>Handleiding</span>
-          </label>
-          <label class="check-item">
-            <input type="radio" name="extraType" value="overig" />
-            <span>Overig</span>
-          </label>
-        </div>
-
-        <div class="btn-row">
-          <button type="button" class="ghost" id="btnAddExtra">
-            <span class="dot"></span> Bestand toevoegen
-          </button>
-          <button type="button" class="primary" id="btnStartViewer">
-            <span class="dot"></span> Klaar &amp; viewer starten
-          </button>
-        </div>
-
-        <div class="mini-note">
-          Dit is een demo: extra uploads worden niet opgeslagen, maar er worden ook geen fouten gegeven.
-        </div>
-
-        <div class="badge-list" id="extraList"></div>
-      </section>
-
       <div class="badge-list">
         <div class="badge warn">Alle logica draait volledig client-side, wij slaan niets op!</div>
-        <div class="badge good">Mogelijk gemaakt door PROFILE EQUIPMENT BV</div>
+        <div class="badge good">PROFILE EQUIPMENT BV</div>
       </div>
     </aside>
 
@@ -572,7 +381,7 @@
       <div class="viewer-header">
         <div>
           <strong id="viewerTitle">Geen model geladen</strong><br />
-          <span id="viewerMeta">Voltooi de wizard of gebruik het demo-bestand.</span>
+          <span id="viewerMeta">Upload een bestand of gebruik het demo-bestand.</span>
         </div>
         <div class="dot-pulse" id="viewerStatusDots" style="opacity:0.1;">
           <span></span><span></span><span></span>
@@ -583,8 +392,8 @@
         <div class="viewer-placeholder" id="viewerPlaceholder">
           <div class="badge warn">Viewer inactief</div>
           <div>
-            Voltooi eerst de stappen in de wizard links<br />
-            of klik op <em>Gebruik demo-bestand</em>.
+            Upload een STEP-bestand links<br />
+            of klik op <em>Voorbeeldbestand</em>.
           </div>
         </div>
       </div>
@@ -595,13 +404,8 @@
 <script>
   // ---- State ----
   const state = {
-    currentStep: 1,
     stepFile: null,
     stepFileName: null,
-    saveFile: null,
-    sapNumber: null,
-    shareFlags: [],
-    extras: [],
     occtLoaded: false,
     occtFailed: false,
     occtPromise: null,
@@ -616,32 +420,6 @@
   };
 
   const $ = (id) => document.getElementById(id);
-  const stepDots = document.querySelectorAll("[data-step-dot]");
-
-  function setStep(step) {
-    state.currentStep = step;
-    ["step-1","step-2","step-3","step-4","step-5"].forEach(id => {
-      const el = $(id);
-      if (el) el.classList.add("hidden");
-    });
-    const visible = $("step-" + step);
-    if (visible) visible.classList.remove("hidden");
-
-    stepDots.forEach(dot => {
-      const n = Number(dot.dataset.stepDot);
-      dot.classList.remove("active","done");
-      if (n < step) dot.classList.add("done");
-      if (n === step) dot.classList.add("active");
-    });
-  }
-
-  function addExtraBadge(fileName, type) {
-    const container = $("extraList");
-    const badge = document.createElement("div");
-    badge.className = "badge";
-    badge.textContent = type + " · " + fileName;
-    container.appendChild(badge);
-  }
 
   async function ensureOcct() {
     if (state.occtFailed) return null;
@@ -689,9 +467,7 @@
     dir.position.set(200,200,100);
     scene.add(dir);
 
-    // Grid wordt later toegevoegd met correcte schaal
     state.gridHelper = null;
-
     state.three = { scene, camera, renderer, controls, canvas };
 
     function onResize() {
@@ -718,8 +494,8 @@
     const scene = state.three.scene;
     if (!scene) return;
     const toRemove = [];
-    scene.traverse(obj => { 
-      if (obj.isMesh || obj.type === 'GridHelper') toRemove.push(obj); 
+    scene.traverse(obj => {
+      if (obj.isMesh || obj.type === 'GridHelper') toRemove.push(obj);
     });
     toRemove.forEach(m => scene.remove(m));
     if (state.gridHelper) {
@@ -740,8 +516,7 @@
 
   function focusCameraOnScene() {
     const { scene, camera, controls } = state.three;
-    
-    // Bereken bounding box van alleen de meshes
+
     const box = new THREE.Box3();
     let hasMeshes = false;
     scene.traverse(obj => {
@@ -750,7 +525,7 @@
         hasMeshes = true;
       }
     });
-    
+
     if (!hasMeshes || !isFinite(box.min.x) || !isFinite(box.max.x)) {
       console.warn("⚠️ Geen geldige meshes gevonden voor camera focus");
       return;
@@ -764,33 +539,28 @@
     console.log("📏 Model grootte:", size);
     console.log("📍 Model centrum:", center);
 
-    // Voeg grid toe met juiste schaal
     const maxDim = Math.max(size.x, size.y, size.z);
     const gridSize = Math.max(maxDim * 2, 100);
     const gridDivisions = 20;
-    
+
     if (state.gridHelper) {
       scene.remove(state.gridHelper);
     }
     state.gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x1f2933, 0x0f172a);
-    state.gridHelper.position.y = box.min.y - 1; // Grid net onder het model
+    state.gridHelper.position.y = box.min.y - 1;
     scene.add(state.gridHelper);
 
-    // Camera afstand berekenen
     const fov = camera.fov * Math.PI / 180;
     let dist = maxDim / (2 * Math.tan(fov/2));
-    dist *= 2.5; // Iets verder weg voor beter overzicht
+    dist *= 2.5;
 
-    // Camera positioneren
     const offset = new THREE.Vector3(dist, dist*0.7, dist);
     camera.position.copy(center).add(offset);
     camera.lookAt(center);
-    
-    // Controls target instellen
+
     controls.target.copy(center);
     controls.update();
 
-    // Near/far planes aanpassen
     camera.near = maxDim * 0.01;
     camera.far = maxDim * 100;
     camera.updateProjectionMatrix();
@@ -801,7 +571,7 @@
 
   async function loadStepIntoViewer(file) {
     console.log("🚀 Start laden STEP-bestand:", file.name);
-    
+
     $("viewerTitle").textContent = state.stepFileName || "Model laden...";
     $("viewerMeta").textContent = "STEP-bestand wordt verwerkt met OpenCascade (occt-import-js)...";
     $("viewerStatusDots").style.opacity = "1";
@@ -828,7 +598,7 @@
       console.log("📦 Lees bestand als ArrayBuffer...");
       const buffer = await file.arrayBuffer();
       const fileBuffer = new Uint8Array(buffer);
-      
+
       console.log("⚙️ Start OCCT conversie...");
       const params = {
         linearUnit: "millimeter",
@@ -856,7 +626,7 @@
 
       (result.meshes || []).forEach((m, idx) => {
         console.log(`  📐 Mesh ${idx + 1}: ${m.attributes.position.array.length / 3} vertices`);
-        
+
         const geom = new THREE.BufferGeometry();
         const posArr = new Float32Array(m.attributes.position.array);
         geom.setAttribute("position", new THREE.BufferAttribute(posArr, 3));
@@ -889,7 +659,7 @@
         "Model geladen. Muis: slepen = orbit, scroll = zoom, rechtsknop = pan.";
       $("viewerStatusDots").style.opacity = "0.15";
       $("viewerPlaceholder").classList.add("hidden");
-      
+
       console.log("✅ Model volledig geladen en zichtbaar!");
     } catch (err) {
       console.error("❌ Fout bij lezen STEP-bestand:", err);
@@ -897,25 +667,21 @@
       $("viewerPlaceholder").classList.remove("hidden");
       $("viewerPlaceholder").innerHTML =
         '<div class="badge error">Viewer fout</div>' +
-        '<div>Bekijk de browserconsole voor details. De wizard blijft verder werken.</div>';
+        '<div>Bekijk de browserconsole voor details.</div>';
       $("viewerStatusDots").style.opacity = "0.15";
     }
   }
 
-  // ---- Wizard events ----
+  // ---- Events ----
   $("stepFileInput").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
     state.stepFile = file;
     state.stepFileName = file.name;
-
-    setStep(2);
-    setTimeout(() => {
-      loadStepIntoViewer(file);
-    }, 50);
+    loadStepIntoViewer(file);
   });
 
-  // Demo-knop: DEMOSTEPFILE.STP uit dezelfde map
+  // Demo-knop: DEMOSTEPFILE.STEP uit dezelfde map
   $("btnLoadDemo").addEventListener("click", async () => {
     try {
       const response = await fetch("DEMOSTEPFILE.STEP");
@@ -929,66 +695,17 @@
       state.stepFile = demoFile;
       state.stepFileName = demoFile.name;
 
-      setStep(2);
-      setTimeout(() => {
-        loadStepIntoViewer(demoFile);
-      }, 50);
+      loadStepIntoViewer(demoFile);
     } catch (err) {
       console.error("Demo load error:", err);
       alert("Fout bij laden demo-bestand. Zie console voor details.");
     }
   });
 
-  $("btnSaveYes").addEventListener("click", () => {
-    state.saveFile = true;
-    setStep(3);
+  // Refresh: nieuwe sessie starten
+  $("btnRefresh").addEventListener("click", () => {
+    location.reload();
   });
-
-  $("btnSaveNo").addEventListener("click", () => {
-    state.saveFile = false;
-    setStep(3);
-  });
-
-  $("btnSapSave").addEventListener("click", () => {
-    const sap = $("sapInput").value.trim();
-    state.sapNumber = sap || null;
-    setStep(4);
-  });
-
-  $("btnSapSkip").addEventListener("click", () => {
-    state.sapNumber = null;
-    setStep(4);
-  });
-
-  $("btnShareNext").addEventListener("click", () => {
-    const checks = Array.from(
-      $("shareChecklist").querySelectorAll("input[type=checkbox]")
-    );
-    state.shareFlags = checks.filter(c => c.checked).map(c => c.value);
-    setStep(5);
-  });
-
-  $("btnAddExtra").addEventListener("click", () => {
-    const file = $("extraFileInput").files[0];
-    if (!file) return;
-    const typeEl = document.querySelector("input[name=extraType]:checked");
-    const type = typeEl ? typeEl.value : "onbekend";
-    state.extras.push({ name: file.name, type });
-    addExtraBadge(file.name, type);
-    $("extraFileInput").value = "";
-    if (typeEl) typeEl.checked = false;
-  });
-
-  $("btnStartViewer").addEventListener("click", () => {
-    if (!state.stepFile) {
-      alert("Kies eerst een STEP-bestand in stap 1 of gebruik het demo-bestand.");
-      return;
-    }
-    setStep(5);
-  });
-
-  setStep(1);
 </script>
 </body>
 </html>
-
