@@ -339,7 +339,6 @@
 <body>
 <div class="app-shell">
   <header>
-    
     <div style="flex:1">
       <h1><span class="icon">3D</span> STEP viewer</h1>
       <p>Upload een STEP-bestand en bekijk het model direct in de browser.</p>
@@ -347,7 +346,7 @@
   </header>
 
   <main>
-    <!-- Linkerzijde: eenvoudige controls -->
+    <!-- Linkerzijde: controls -->
     <aside class="wizard-pane">
       <section class="card">
         <h2>STEP-bestand uploaden</h2>
@@ -360,8 +359,11 @@
           <button type="button" id="btnLoadDemo" class="ghost">
             <span class="dot"></span> Voorbeeldbestand
           </button>
-          <button type="button" id="btnRefresh" class="primary">
+          <button type="button" id="btnRefresh" class="ghost">
             <span class="dot"></span> Nieuwe sessie
+          </button>
+          <button type="button" id="btnMeasureToggle" class="primary">
+            <span class="dot"></span> Meten: uit
           </button>
         </div>
 
@@ -416,6 +418,15 @@
       renderer: null,
       controls: null,
       canvas: null
+    },
+    // Meet-functie
+    measure: {
+      enabled: false,
+      points: [],
+      line: null,
+      labelEl: null,
+      raycaster: new THREE.Raycaster(),
+      mouse: new THREE.Vector2()
     }
   };
 
@@ -486,6 +497,9 @@
       controls.update();
       renderer.render(scene, camera);
     })();
+
+    // Klikken op canvas gebruiken voor afstand meten
+    canvas.addEventListener("click", onCanvasClickForMeasure);
 
     console.log("✅ Three.js viewer geïnitialiseerd");
   }
@@ -569,6 +583,102 @@
     console.log("🎯 Camera kijkt naar:", controls.target);
   }
 
+  // --- Helpers voor meten ---
+  function ensureMeasureLabel() {
+    if (state.measure.labelEl) return state.measure.labelEl;
+
+    const el = document.createElement("div");
+    el.style.position = "absolute";
+    el.style.right = "12px";
+    el.style.bottom = "12px";
+    el.style.padding = "6px 10px";
+    el.style.borderRadius = "999px";
+    el.style.background = "rgba(15,23,42,0.9)";
+    el.style.border = "1px solid rgba(148,163,184,0.6)";
+    el.style.fontSize = "11px";
+    el.style.color = "#e5e7eb";
+    el.style.pointerEvents = "none";
+    el.style.zIndex = "10";
+    el.textContent = "Meten: kies twee punten";
+    state.measure.labelEl = el;
+
+    const wrap = document.querySelector(".viewer-canvas-wrap");
+    wrap.appendChild(el);
+    return el;
+  }
+
+  function clearMeasurement() {
+    const { scene } = state.three;
+    const { line, labelEl } = state.measure;
+
+    state.measure.points = [];
+
+    if (line && scene) {
+      scene.remove(line);
+    }
+    state.measure.line = null;
+
+    if (labelEl) {
+      labelEl.remove();
+      state.measure.labelEl = null;
+    }
+  }
+
+  function onCanvasClickForMeasure(event) {
+    if (!state.measure.enabled) return;
+    if (!state.three.scene || !state.three.camera || !state.three.canvas) return;
+
+    const { scene, camera, canvas } = state.three;
+    const { raycaster, mouse, points } = state.measure;
+
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    const meshes = [];
+    scene.traverse(obj => {
+      if (obj.isMesh) meshes.push(obj);
+    });
+
+    const intersects = raycaster.intersectObjects(meshes, true);
+    if (!intersects.length) return;
+
+    const point = intersects[0].point.clone();
+    points.push(point);
+
+    if (points.length === 1) {
+      const label = ensureMeasureLabel();
+      label.textContent = "1e punt gekozen – klik 2e punt";
+      return;
+    }
+
+    if (points.length === 2) {
+      const p1 = points[0];
+      const p2 = points[1];
+
+      const distance = p1.distanceTo(p2); // als STEP in mm, dan is dit mm
+      const distanceMm = distance;
+
+      const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+      const material = new THREE.LineBasicMaterial({ linewidth: 2 });
+      const line = new THREE.Line(geometry, material);
+
+      if (state.measure.line) {
+        scene.remove(state.measure.line);
+      }
+      scene.add(line);
+      state.measure.line = line;
+
+      const label = ensureMeasureLabel();
+      label.textContent = `Afstand: ${distanceMm.toFixed(2)} mm`;
+
+      // klaar met deze meting, volgende meting weer twee punten
+      state.measure.points = [];
+    }
+  }
+
   async function loadStepIntoViewer(file) {
     console.log("🚀 Start laden STEP-bestand:", file.name);
 
@@ -622,6 +732,7 @@
       console.log("✅ STEP succesvol geconverteerd, aantal meshes:", result.meshes?.length || 0);
 
       clearSceneMeshes();
+      clearMeasurement();
       const scene = state.three.scene;
 
       (result.meshes || []).forEach((m, idx) => {
@@ -656,7 +767,7 @@
 
       $("viewerTitle").textContent = state.stepFileName || "STEP-model";
       $("viewerMeta").textContent =
-        "Model geladen. Muis: slepen = orbit, scroll = zoom, rechtsknop = pan.";
+        "Model geladen. Muis: slepen = orbit, scroll = zoom, rechtsknop = pan. Meten: knop links.";
       $("viewerStatusDots").style.opacity = "0.15";
       $("viewerPlaceholder").classList.add("hidden");
 
@@ -705,6 +816,22 @@
   // Refresh: nieuwe sessie starten
   $("btnRefresh").addEventListener("click", () => {
     location.reload();
+  });
+
+  // Meten-knop
+  $("btnMeasureToggle").addEventListener("click", () => {
+    state.measure.enabled = !state.measure.enabled;
+    const btn = $("btnMeasureToggle");
+
+    if (state.measure.enabled) {
+      btn.textContent = "Meten: aan";
+      btn.classList.add("primary");
+      ensureMeasureLabel();
+    } else {
+      btn.textContent = "Meten: uit";
+      btn.classList.remove("primary");
+      clearMeasurement();
+    }
   });
 </script>
 </body>
