@@ -278,7 +278,6 @@
     }
 
     .check-item:hover { background: rgba(15, 23, 42, 0.8); }
-
     .check-item input { accent-color: var(--accent); }
 
     .mini-note {
@@ -405,10 +404,9 @@
   <!-- OCCT (WebAssembly loader) -->
   <script src="occt-import-js.js"></script>
 
-  <!-- Three.js klassiek (globale THREE) -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.110.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.110.0/examples/js/controls/OrbitControls.js"></script>
-
+  <!-- Three.js klassiek + OrbitControls (r110: OrbitControls als globale constructor) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.110.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.110.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 <div class="app-shell">
@@ -442,6 +440,13 @@
 
         <label class="field-label" for="stepFileInput">STEP / STP bestand</label>
         <input id="stepFileInput" class="file-input" type="file" accept=".step,.stp" />
+
+        <!-- Demo-knop -->
+        <div class="btn-row">
+          <button type="button" id="btnLoadDemo" class="ghost">
+            <span class="dot"></span> Gebruik demo-bestand
+          </button>
+        </div>
 
         <div class="mini-note">
           Bestanden blijven in de browser; er wordt niets naar een server geüpload.
@@ -567,7 +572,7 @@
       <div class="viewer-header">
         <div>
           <strong id="viewerTitle">Geen model geladen</strong><br />
-          <span id="viewerMeta">Voltooi eerst de wizard om de STEP-viewer te starten.</span>
+          <span id="viewerMeta">Voltooi de wizard of gebruik het demo-bestand.</span>
         </div>
         <div class="dot-pulse" id="viewerStatusDots" style="opacity:0.1;">
           <span></span><span></span><span></span>
@@ -578,8 +583,8 @@
         <div class="viewer-placeholder" id="viewerPlaceholder">
           <div class="badge warn">Viewer inactief</div>
           <div>
-            Voltooi eerst alle stappen in de wizard links.<br />
-            Daarna wordt het STEP-model hier weergegeven.
+            Voltooi eerst de stappen in de wizard links<br />
+            of klik op <em>Gebruik demo-bestand</em>.
           </div>
         </div>
       </div>
@@ -756,11 +761,12 @@
 
     const occt = await ensureOcct();
     if (!occt) {
-      $("viewerMeta").textContent = "occt-import-js is niet beschikbaar (check bestanden).";
+      $("viewerMeta").textContent = "occt-import-js is niet beschikbaar (check bestanden & hosting).";
       $("viewerPlaceholder").classList.remove("hidden");
       $("viewerPlaceholder").innerHTML =
         '<div class="badge error">OCCT niet geladen</div>' +
-        '<div>Controleer of occt-import-js.js en de .wasm in dezelfde map staan.</div>';
+        '<div>Controleer of occt-import-js.js en occt-import-js.wasm naast deze HTML staan, ' +
+        'en dat je via http(s) host (niet via file://).</div>';
       $("viewerStatusDots").style.opacity = "0.15";
       return;
     }
@@ -782,7 +788,7 @@
         $("viewerPlaceholder").classList.remove("hidden");
         $("viewerPlaceholder").innerHTML =
           '<div class="badge error">Kon model niet renderen</div>' +
-          '<div>Gebruik dit in de demo als scenario met een corrupt CAD-bestand.</div>';
+          '<div>Gebruik dit in de demo als scenario met een corrupt of onbekend CAD-bestand.</div>';
         $("viewerStatusDots").style.opacity = "0.15";
         return;
       }
@@ -828,7 +834,7 @@
       $("viewerPlaceholder").classList.remove("hidden");
       $("viewerPlaceholder").innerHTML =
         '<div class="badge error">Viewer fout</div>' +
-        '<div>Bekijk de browserconsole voor details (demo blijft gewoon draaien).</div>';
+        '<div>Bekijk de browserconsole voor details. De wizard blijft verder werken.</div>';
       $("viewerStatusDots").style.opacity = "0.15";
     }
   }
@@ -844,6 +850,30 @@
     setTimeout(() => {              // dan viewer
       loadStepIntoViewer(file);
     }, 50);
+  });
+
+  // Demo-knop: DEMOSTEPFILE.STP uit dezelfde map
+  $("btnLoadDemo").addEventListener("click", async () => {
+    try {
+      const response = await fetch("DEMOSTEPFILE.STEP");
+      if (!response.ok) {
+        alert("Kon DEMOSTEPFILE.STP niet laden. Staat het bestand in dezelfde map als deze HTML?");
+        return;
+      }
+      const blob = await response.blob();
+      const demoFile = new File([blob], "DEMOSTEPFILE.STP", { type: "application/octet-stream" });
+
+      state.stepFile = demoFile;
+      state.stepFileName = demoFile.name;
+
+      setStep(2);
+      setTimeout(() => {
+        loadStepIntoViewer(demoFile);
+      }, 50);
+    } catch (err) {
+      console.error("Demo load error:", err);
+      alert("Fout bij laden demo-bestand. Zie console voor details.");
+    }
   });
 
   $("btnSaveYes").addEventListener("click", () => {
@@ -888,10 +918,10 @@
 
   $("btnStartViewer").addEventListener("click", () => {
     if (!state.stepFile) {
-      alert("Kies eerst een STEP-bestand in stap 1.");
+      alert("Kies eerst een STEP-bestand in stap 1 of gebruik het demo-bestand.");
       return;
     }
-    setStep(5); // viewer draait al sinds stap 1
+    setStep(5); // viewer draait al sinds stap 1/demo
   });
 
   setStep(1);
